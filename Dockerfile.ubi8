@@ -1,0 +1,24 @@
+FROM registry.access.redhat.com/ubi8/ubi:latest as builder
+
+ENV PATH /go/bin:/usr/local/go/bin:$PATH
+ENV GOPATH /go
+
+RUN INSTALL_PKGS="git golang make" && \
+    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    rpm -V $INSTALL_PKGS && \
+    yum clean all -y
+
+COPY . /go/src/github.com/jessfraz/gmailfilters
+
+WORKDIR /go/src/github.com/jessfraz/gmailfilters
+RUN make static && \
+    mv gmailfilters /usr/bin/gmailfilters && \
+    echo "Build complete."
+
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+COPY --from=builder /usr/bin/gmailfilters /usr/bin/gmailfilters
+
+USER 1001
+
+ENTRYPOINT [ "gmailfilters" ]
+CMD [ "--help" ]
